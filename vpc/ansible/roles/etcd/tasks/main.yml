@@ -1,0 +1,42 @@
+- name: install and configure etcd
+  hosts: ubuntu
+  remote_user: jdlang
+  become: yes
+
+  tasks:
+  - name: create directories
+    file: path=/etc/etcd/ state=directory
+    file: path=/var/lib/etcd/ state=directory
+
+  - name: copy certificates
+    copy:
+      src: "{{playbook_dir}}/../../../../../cert/test.pem"
+      dest: "/etc/etcd/"
+
+  - name: download etcd binaries
+    get_url:
+      url: "https://github.com/coreos/etcd/releases/download/v3.1.4/etcd-v3.1.4-linux-amd64.tar.gz"
+      dest: "/usr/local/src"
+      force: no
+
+  - name: extract etcd binaries
+    unarchive:
+      src: "/usr/local/src/etcd-v3.1.4-linux-amd64.tar.gz"
+      dest: "/usr/bin/"
+      remote_src: True
+
+  - name: install etcd service
+    template:
+      src: "{{playbook_dir}}/../Templates/etcd.service.j2"
+      dest: "/etc/systemd/system/etcd.service"
+    become: yes
+
+  - name: reload daemon
+    systemd: daemon_reload=yes
+    become: yes
+
+  - name: start etcd
+    service:
+      name: etcd
+      enabled: yes
+      state: started
